@@ -29,13 +29,21 @@ class Main:
 		assert window not in self._process
 		self._process[window]=subprocess.Popen(self._config.command, stdin=subprocess.PIPE)
 
-	def write(self, window: str, text: str)->None:
-		# is it necessary to lock this?
+	def _write_internal(self, window: str, text: str, retry: bool=True)->None:
 		if window not in self._process:
 			self.start_process(window)
-		pipe=self._process[window].stdin
-		pipe.write(text.encode("UTF-8"))
-		pipe.flush()
+		try:
+			pipe=self._process[window].stdin
+			pipe.write(text.encode("UTF-8"))
+			pipe.flush()
+		except BrokenPipeError:
+			if not retry: raise  # avoid infinite loop (if any)
+			self.close(window)
+			self._write_internal(window, text, retry=False)
+
+	def write(self, window: str, text: str)->None:
+		# is it necessary to lock this?
+		self._write_internal(window, text)
 
 	def clear(self, window: str)->None:
 		self.write(window, self._config.escape_sequence_clear_window)
@@ -43,7 +51,10 @@ class Main:
 	def close(self, window: str)->None:
 		if window not in self._process:
 			return
-		self._process[window].stdin.close()
+		try:
+			self._process[window].stdin.close()
+		except BrokenPipeError:
+			pass
 		self._process[window].wait(timeout=1)  # might raise subprocess.TimeoutExpired
 		del self._process[window]
 
