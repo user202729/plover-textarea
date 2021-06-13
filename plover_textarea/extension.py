@@ -25,7 +25,7 @@ class Main:
 			window=next(iter(self._process.keys()))
 			self.close(window)
 
-	def start_process(self, window: str):
+	def start_process(self, window: str)->None:
 		assert window not in self._process
 		self._process[window]=subprocess.Popen(self._config.command, stdin=subprocess.PIPE)
 
@@ -34,6 +34,7 @@ class Main:
 			self.start_process(window)
 		try:
 			pipe=self._process[window].stdin
+			assert pipe
 			pipe.write(text.encode("UTF-8"))
 			pipe.flush()
 		except BrokenPipeError:
@@ -52,7 +53,9 @@ class Main:
 		if window not in self._process:
 			return
 		try:
-			self._process[window].stdin.close()
+			pipe=self._process[window].stdin
+			assert pipe
+			pipe.close()
 		except BrokenPipeError:
 			pass
 		self._process[window].wait(timeout=1)  # might raise subprocess.TimeoutExpired

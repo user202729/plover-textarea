@@ -2,7 +2,7 @@ from typing import NamedTuple, List
 from pathlib import Path
 import json
 
-from plover.oslayer.config import CONFIG_DIR
+from plover.oslayer.config import CONFIG_DIR  # type: ignore
 
 class Config(NamedTuple):
 	command: List[str]
